@@ -1,7 +1,7 @@
 name := """microservices"""
 
 version := "1.0.0"
-organization := "se.durre"
+organization := "com.github.durre"
 scalaVersion := "2.11.8"
 libraryDependencies ++= Seq(
   "com.typesafe" % "config" % "1.3.0",
