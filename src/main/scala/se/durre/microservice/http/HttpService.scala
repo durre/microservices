@@ -9,8 +9,7 @@ import com.typesafe.scalalogging.Logger
 import pdi.jwt.{JwtAlgorithm, JwtJson}
 import play.api.libs.json.Reads._
 import play.api.libs.json._
-import se.durre.microservice.http.models.RequestInfo
-import se.durre.microservice.models.OAuthScope
+import se.durre.microservice.models.{OAuthScope, RequestInfo}
 
 import scala.util.Success
 
