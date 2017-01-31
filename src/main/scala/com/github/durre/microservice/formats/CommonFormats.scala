@@ -1,4 +1,4 @@
-package se.durre.microservice.http.formats
+package com.github.durre.microservice.formats
 
 import java.time.{LocalDate, LocalDateTime}
 import java.time.format.DateTimeFormatter

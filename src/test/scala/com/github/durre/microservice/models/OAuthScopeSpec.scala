@@ -1,4 +1,4 @@
-package se.durre.microservice.models
+package com.github.durre.microservice.models
 
 import org.scalatest.{Matchers, FlatSpec}
 

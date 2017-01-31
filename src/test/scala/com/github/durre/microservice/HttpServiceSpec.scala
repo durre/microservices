@@ -1,4 +1,4 @@
-package se.durre.microservice
+package com.github.durre.microservice
 
 import java.util.UUID
 
@@ -10,8 +10,8 @@ import com.typesafe.scalalogging.Logger
 import org.scalatest.{FunSuite, Matchers}
 import pdi.jwt.{JwtAlgorithm, JwtJson}
 import play.api.libs.json.{JsObject, Json}
-import se.durre.microservice.http.HttpService
-import se.durre.microservice.models.OAuthScope
+import com.github.durre.microservice.http.HttpService
+import com.github.durre.microservice.models.OAuthScope
 
 
 class HttpServiceSpec extends FunSuite with ScalatestRouteTest with Matchers with HttpService  {

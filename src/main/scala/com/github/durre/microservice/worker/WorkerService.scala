@@ -1,4 +1,4 @@
-package se.durre.microservice.worker
+package com.github.durre.microservice.worker
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer

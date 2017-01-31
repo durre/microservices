@@ -1,4 +1,4 @@
-package se.durre.microservice.client
+package com.github.durre.microservice.client
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http

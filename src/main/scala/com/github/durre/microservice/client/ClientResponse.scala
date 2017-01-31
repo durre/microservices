@@ -1,4 +1,4 @@
-package se.durre.microservice.client
+package com.github.durre.microservice.client
 
 import spray.json.{JsArray, JsObject}
 

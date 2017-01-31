@@ -1,4 +1,4 @@
-package se.durre.microservice.http
+package com.github.durre.microservice.http
 
 import java.util.UUID
 
@@ -9,7 +9,7 @@ import com.typesafe.scalalogging.Logger
 import pdi.jwt.{JwtAlgorithm, JwtJson}
 import play.api.libs.json.Reads._
 import play.api.libs.json._
-import se.durre.microservice.models.{OAuthScope, RequestInfo}
+import com.github.durre.microservice.models.{OAuthScope, RequestInfo}
 
 import scala.util.Success
 
