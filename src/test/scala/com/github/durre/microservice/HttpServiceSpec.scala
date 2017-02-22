@@ -6,17 +6,19 @@ import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken, RawHe
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.testkit.ScalatestRouteTest
+import com.auth0.jwt.JWT
+import com.auth0.jwt.algorithms.Algorithm
 import com.typesafe.scalalogging.Logger
 import org.scalatest.{FunSuite, Matchers}
-import pdi.jwt.{JwtAlgorithm, JwtJson}
-import play.api.libs.json.{JsObject, Json}
 import com.github.durre.microservice.http.HttpService
-import com.github.durre.microservice.models.OAuthScope
+import com.github.durre.microservice.models.{OAuthScope, RequestInfo}
+
+import scala.concurrent.Future
 
 
 class HttpServiceSpec extends FunSuite with ScalatestRouteTest with Matchers with HttpService  {
 
-  val interCommunicationToken: Option[String] = Some("internal")
+  val serviceToken: Option[String] = Some("internal")
   val jwtSecret: String = "secret"
 
   case object MyScope extends OAuthScope { val name: String = "myscope" }
@@ -28,25 +30,57 @@ class HttpServiceSpec extends FunSuite with ScalatestRouteTest with Matchers wit
     case _ => None
   }
 
-  val route =
-    get {
-      authorize(Set(MyScope)) { _ =>
-        complete("OK")
+  val verify = (req: RequestInfo, resourceId: UUID) => req.orgId == resourceId
+  val asyncVerify = (req: RequestInfo, resourceId: UUID) => Future.successful(req.orgId == resourceId)
+
+  val route: Route =
+    verifyServiceToken {
+      authorizeJwt { req =>
+        path("protected") {
+          get {
+            verifyScope(MyScope, req) {
+              complete("OK")
+            }
+          }
+        } ~
+          path("resource" / JavaUUID) { id =>
+            get {
+              verifyScope(MyScope, req) {
+                verifyOwnership(req, id, verify) {
+                  complete("OK")
+                }
+              }
+            }
+          } ~
+          path("async-resource" / JavaUUID) { id =>
+            get {
+              verifyScope(MyScope, req) {
+                asyncVerifyOwnership(req, id, asyncVerify) {
+                  complete("OK")
+                }
+              }
+            }
+          }
       }
     }
 
-  def createJwt(claims: JsObject): String = JwtJson.encode(claims, jwtSecret, JwtAlgorithm.HS256)
+
+
+  val userId: UUID = UUID.randomUUID()
+  val orgId: UUID = UUID.randomUUID()
+  
+  def createJwt(scopes: Set[OAuthScope]): String =
+    JWT.create()
+      .withClaim("userId", userId.toString)
+      .withClaim("orgId", orgId.toString)
+      .withArrayClaim("scopes", scopes.map(_.name).toArray)
+      .sign(Algorithm.HMAC256(jwtSecret))
 
   test("test authorization reject when you don't supply the internal token") {
 
-    val jwt = createJwt(Json.obj(
-      "userId" -> UUID.randomUUID().toString,
-      "orgId" -> UUID.randomUUID().toString,
-      "scopes" -> "myscope",
-      "exp" -> 100
-    ))
+    val jwt = createJwt(Set(MyScope))
 
-    val req = Get()
+    val req = Get("/protected")
       .addHeader(Authorization(OAuth2BearerToken(jwt)))
 
     req ~> route ~> check {
@@ -56,14 +90,10 @@ class HttpServiceSpec extends FunSuite with ScalatestRouteTest with Matchers wit
 
   test("test authorization reject when you have the wrong set of scopes") {
 
-    val jwt = createJwt(Json.obj(
-      "userId" -> UUID.randomUUID().toString,
-      "orgId" -> UUID.randomUUID().toString,
-      "scopes" -> "another"
-    ))
+    val jwt = createJwt(Set(AnotherScope))
 
-    val req = Get()
-      .addHeader(RawHeader("X-Internal-Secret", interCommunicationToken.get))
+    val req = Get("/protected")
+      .addHeader(RawHeader(internalSecretHeader, serviceToken.get))
       .addHeader(Authorization(OAuth2BearerToken(jwt)))
 
     req ~> route ~> check {
@@ -73,14 +103,62 @@ class HttpServiceSpec extends FunSuite with ScalatestRouteTest with Matchers wit
 
   test("test all good when you have all the right tokens") {
 
-    val jwt = createJwt(Json.obj(
-      "userId" -> UUID.randomUUID().toString,
-      "orgId" -> UUID.randomUUID().toString,
-      "scopes" -> Set("myscope")
-    ))
+    val jwt = createJwt(Set(MyScope))
 
-    val req = Get()
-      .addHeader(RawHeader("X-Internal-Secret", interCommunicationToken.get))
+    val req = Get("/protected")
+      .addHeader(RawHeader(internalSecretHeader, serviceToken.get))
+      .addHeader(Authorization(OAuth2BearerToken(jwt)))
+
+    req ~> route ~> check {
+      responseAs[String] shouldEqual "OK"
+    }
+  }
+
+  test("forbid access to specific resources") {
+
+    val jwt = createJwt(Set(MyScope))
+
+    val req = Get("/resource/"+UUID.randomUUID().toString)
+      .addHeader(RawHeader(internalSecretHeader, serviceToken.get))
+      .addHeader(Authorization(OAuth2BearerToken(jwt)))
+
+    req ~> route ~> check {
+      rejection === AuthorizationFailedRejection
+    }
+  }
+
+  test("grant access to specific resources") {
+    
+    val jwt = createJwt(Set(MyScope))
+
+    val req = Get("/resource/"+orgId.toString)
+      .addHeader(RawHeader(internalSecretHeader, serviceToken.get))
+      .addHeader(Authorization(OAuth2BearerToken(jwt)))
+
+    req ~> route ~> check {
+      responseAs[String] shouldEqual "OK"
+    }
+  }
+
+  test("async forbid access to specific resources") {
+
+    val jwt = createJwt(Set(MyScope))
+
+    val req = Get("/async-resource/"+UUID.randomUUID().toString)
+      .addHeader(RawHeader(internalSecretHeader, serviceToken.get))
+      .addHeader(Authorization(OAuth2BearerToken(jwt)))
+
+    req ~> route ~> check {
+      rejection === AuthorizationFailedRejection
+    }
+  }
+
+  test("async grant access to specific resources") {
+
+    val jwt = createJwt(Set(MyScope))
+
+    val req = Get("/async-resource/"+orgId.toString)
+      .addHeader(RawHeader(internalSecretHeader, serviceToken.get))
       .addHeader(Authorization(OAuth2BearerToken(jwt)))
 
     req ~> route ~> check {
