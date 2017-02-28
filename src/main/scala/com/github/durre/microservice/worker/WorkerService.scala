@@ -2,8 +2,9 @@ package com.github.durre.microservice.worker
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import akka.stream.contrib.amqp.{AmqpConnectionUri, AmqpSource, NamedQueueSourceSettings, QueueDeclaration}
-import com.typesafe.config.Config
+import akka.stream.alpakka.amqp.{AmqpConnectionUri, NamedQueueSourceSettings, QueueDeclaration}
+import akka.stream.alpakka.amqp.scaladsl.AmqpSource
+import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.Logger
 
 import scala.concurrent.ExecutionContextExecutor
@@ -11,18 +12,18 @@ import scala.concurrent.ExecutionContextExecutor
 trait WorkerService {
 
   def rabbitMqUri: String
-  def workerConfig: Config
 
-  lazy val logger = Logger(workerConfig.getString("name"))
-  implicit lazy val system = ActorSystem(workerConfig.getString("name"))
+  lazy val config: Config = ConfigFactory.load()
+  lazy val log = Logger(config.getString("name"))
+  implicit lazy val system = ActorSystem(config.getString("name"))
   implicit lazy val materializer = ActorMaterializer()
   implicit lazy val ec: ExecutionContextExecutor = materializer.executionContext
 
   lazy val source = AmqpSource(
     settings = NamedQueueSourceSettings(
-      connectionSettings = AmqpConnectionUri(rabbitMqUri),
-      queue = workerConfig.getString("sourceQueue"),
-      declarations = List(QueueDeclaration(name = workerConfig.getString("sourceQueue"), durable = true))
+      connectionSettings = AmqpConnectionUri(config.getString("rabbitmq.uri")),
+      queue = config.getString("worker.sourceQueue"),
+      declarations = List(QueueDeclaration(name = config.getString("worker.sourceQueue"), durable = true))
     ),
     bufferSize = 2
   )

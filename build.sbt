@@ -11,8 +11,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-http-testkit" % "10.0.3",
   "com.typesafe.akka" %% "akka-http-spray-json" % "10.0.3",
   "com.typesafe.akka" %% "akka-stream" % "2.4.17",
-  "com.typesafe.akka" %% "akka-stream-contrib" % "0.6",
-  "com.typesafe.akka" %% "akka-stream-contrib-amqp" % "0.6",
+  "com.lightbend.akka" %% "akka-stream-alpakka-amqp" % "0.6",
   "com.auth0" % "java-jwt" % "3.1.0",
   "org.scalatest" %% "scalatest" % "2.2.4" % "test"
 )
