@@ -1,4 +1,4 @@
-package com.github.durre.microservice.http
+package com.github.durre.microservice.worker
 
 import akka.NotUsed
 import akka.actor.ActorSystem
@@ -9,7 +9,7 @@ import akka.stream.scaladsl.{Flow, MergeHub, RunnableGraph, Sink, Source}
 import akka.util.ByteString
 import spray.json.RootJsonFormat
 
-abstract class WorkPublisher[T](rabbitMqUri: String)(implicit system: ActorSystem, mat: ActorMaterializer) {
+abstract class WorkPublisher[T](rabbitMqUri: String, durable: Boolean = true)(implicit system: ActorSystem, mat: ActorMaterializer) {
 
   protected def queueName: String
   protected def format: RootJsonFormat[T]
@@ -19,7 +19,7 @@ abstract class WorkPublisher[T](rabbitMqUri: String)(implicit system: ActorSyste
       AmqpConnectionUri(rabbitMqUri),
       None,
       Some(queueName),
-      List(QueueDeclaration(name = queueName, durable = true))
+      List(QueueDeclaration(name = queueName, durable = durable))
     )
   )
 

@@ -11,11 +11,9 @@ import scala.concurrent.ExecutionContextExecutor
 
 trait WorkerService {
 
-  def rabbitMqUri: String
-
   lazy val config: Config = ConfigFactory.load()
-  lazy val log = Logger(config.getString("name"))
-  implicit lazy val system = ActorSystem(config.getString("name"))
+  lazy val log = Logger(config.getString("worker.name"))
+  implicit lazy val system = ActorSystem(config.getString("worker.name"))
   implicit lazy val materializer = ActorMaterializer()
   implicit lazy val ec: ExecutionContextExecutor = materializer.executionContext
 
