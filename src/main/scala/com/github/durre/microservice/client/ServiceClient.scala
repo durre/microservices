@@ -3,7 +3,7 @@ package com.github.durre.microservice.client
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
+import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken, RawHeader}
 import akka.pattern.CircuitBreaker
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
@@ -13,22 +13,40 @@ import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
-class ServiceClient(host: String, port: Int, ssl: Boolean, internalSecret: Option[String])(implicit system: ActorSystem, materializer: ActorMaterializer, ec: ExecutionContext) {
+object ServiceClient {
 
-  assert(
-    !(host.startsWith("http://") || host.startsWith("https://")),
-    s"Please don't include the protocol (http / https) in the hostname: $host"
-  )
+  private val urlRegex = """((?i:http[s]?)):\/\/((?i:[a-z0-9-.]+)):?(\d+)?""".r
+
+  def extractUrlParts(url: String): (Boolean, String, Option[Int]) =
+    url match {
+      case urlRegex(protocol, hostname, null) => (protocol.toLowerCase == "https", hostname, None)
+      case urlRegex(protocol, hostname, port) => (protocol.toLowerCase == "https", hostname, Some(port.toInt))
+      case _ => throw new RuntimeException("Invalid format of ServiceClient url"+url)
+    }
+}
+
+class ServiceClient(url: String, serviceTokenHeader: Option[String], serviceToken: Option[String] = None)(implicit system: ActorSystem, materializer: ActorMaterializer, ec: ExecutionContext) {
+
+  import ServiceClient._
+
+  // Append this to every request
+  private val staticHeaders = (serviceTokenHeader, serviceToken) match {
+    case (Some(header), Some(token)) => Seq(RawHeader(header, token))
+    case _ => Seq()
+  }
+
+  private lazy val serviceFlow: Flow[HttpRequest, HttpResponse, Future[Http.OutgoingConnection]] = {
+    val (ssl, host, maybePort) = extractUrlParts(url)
+    if (ssl) Http().outgoingConnectionHttps(host = host, port = maybePort.getOrElse(443))
+    else Http().outgoingConnection(host = host, port = maybePort.getOrElse(80))
+  }
+
 
   private val breaker =
     CircuitBreaker(system.scheduler,
       maxFailures = 5,
       callTimeout = 20.seconds,
       resetTimeout = 30.seconds)
-
-  private lazy val serviceFlow: Flow[HttpRequest, HttpResponse, Future[Http.OutgoingConnection]] =
-    if (ssl) Http().outgoingConnectionHttps(host = host, port = port)
-    else Http().outgoingConnection(host = host, port = port)
 
   def get(uri: String, jwt: String): Future[ClientResponse] =
     breaker.withCircuitBreaker(
@@ -78,7 +96,9 @@ class ServiceClient(host: String, port: Int, ssl: Boolean, internalSecret: Optio
 
   private def authorizationHeader(jwt: String): Seq[HttpHeader] = Seq(
     Authorization(OAuth2BearerToken(jwt))
-  )
+  ) ++ staticHeaders
+
+
 
   private def toClientResponse(httpResponse: HttpResponse): ClientResponse = {
     httpResponse.entity match {

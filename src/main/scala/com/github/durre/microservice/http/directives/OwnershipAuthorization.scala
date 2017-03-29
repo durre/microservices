@@ -2,7 +2,9 @@ package com.github.durre.microservice.http.directives
 
 import java.util.UUID
 
+import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.{AuthorizationFailedRejection, Directive0}
+import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.directives.BasicDirectives.{extractExecutionContext, pass}
 import akka.http.scaladsl.server.directives.FutureDirectives.onComplete
 import akka.http.scaladsl.server.directives.RouteDirectives.reject
@@ -16,8 +18,9 @@ trait OwnershipAuthorization {
   /**
     * Based on the RequestInfo, verifies that the client owns this specific resource
     */
-  def verifyOwnership(req: RequestInfo, resourceId: UUID, verify: (RequestInfo, UUID) => Boolean): Directive0 =
-    if (verify(req, resourceId)) pass else reject(AuthorizationFailedRejection)
+  def verifyOwnership(verified: Boolean): Directive0 =
+    if (verified) pass
+    else complete((StatusCodes.Forbidden, "You don't have access to this resource"))
 
 
   /**

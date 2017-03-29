@@ -1,5 +1,6 @@
 package com.github.durre.microservice.http.directives
 
+import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.server.Directives.{complete, get, path}
 import akka.http.scaladsl.server.{AuthorizationFailedRejection, Route}
@@ -24,7 +25,7 @@ class InternalServiceSecuritySpec extends FunSuite with ScalatestRouteTest with 
     val req = Get("/users")
 
     req ~> route ~> check {
-      rejection === AuthorizationFailedRejection
+      status === StatusCodes.Forbidden
     }
   }
 
@@ -33,7 +34,7 @@ class InternalServiceSecuritySpec extends FunSuite with ScalatestRouteTest with 
       .addHeader(RawHeader(secretHeader, "wrongToken"))
 
     req ~> route ~> check {
-      rejection === AuthorizationFailedRejection
+      status === StatusCodes.Forbidden
     }
   }
 

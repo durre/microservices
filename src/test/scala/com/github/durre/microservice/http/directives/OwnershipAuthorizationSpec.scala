@@ -2,6 +2,7 @@ package com.github.durre.microservice.http.directives
 
 import java.util.UUID
 
+import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.AuthorizationFailedRejection
 import akka.http.scaladsl.server.Directives.complete
 import akka.http.scaladsl.testkit.ScalatestRouteTest
@@ -44,21 +45,18 @@ class OwnershipAuthorizationSpec extends FunSuite with ScalatestRouteTest with M
   }
 
   test("forbid access to a resource you down own") {
-    val req = TestModels.requestInfo
-    val resourceId = UUID.randomUUID()
-    val route = verifyOwnership(req, resourceId, verifyOrganizationOwner) { complete("OK") }
+    val route = verifyOwnership(false) { complete("OK") }
 
     Get("/") ~> route ~> check {
-      rejection === AuthorizationFailedRejection
+      status === StatusCodes.Forbidden
     }
   }
 
   test("grant access to a resource you own") {
-    val req = TestModels.requestInfo
-    val route = verifyOwnership(req, req.orgId, verifyOrganizationOwner) { complete("OK") }
+    val route = verifyOwnership(true) { complete("OK") }
 
     Get("/") ~> route ~> check {
-      responseAs[String] shouldEqual "OK"
+      status === StatusCodes.Forbidden
     }
   }
 

@@ -24,7 +24,7 @@ trait HttpService {
   lazy val log = Logger(serviceName)
   implicit lazy val system = ActorSystem(serviceName)
   implicit lazy val materializer = ActorMaterializer()
-  implicit lazy val executionContext: ExecutionContext = system.dispatcher
+  implicit lazy val ec: ExecutionContext = system.dispatcher
 
   /**
     * The user implements this
