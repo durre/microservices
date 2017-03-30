@@ -1,6 +1,6 @@
 name := """microservices"""
 
-version := "1.2.0"
+version := "1.2.1"
 organization := "com.github.durre"
 scalaVersion := "2.11.8"
 libraryDependencies ++= Seq(
