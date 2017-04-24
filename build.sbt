@@ -16,3 +16,5 @@ libraryDependencies ++= Seq(
   "com.auth0" % "java-jwt" % "3.1.0",
   "org.scalatest" %% "scalatest" % "2.2.4" % "test"
 )
+
+publishMavenStyle := true
